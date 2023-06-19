@@ -2,7 +2,7 @@
   "name": "testwizard",
   "displayName": "TestWizard",
   "description": "Let the TestWizard 🧙 generate your unit tests!",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "license": "MIT",
   "engines": {
     "vscode": "^1.79.0"
