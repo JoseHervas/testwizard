@@ -1,16 +1,15 @@
-import * as vscode from 'vscode';
-import * as keytar from 'keytar';
-import { ContextManager } from './Agents/ContextManager';
+import * as vscode from "vscode";
+import * as keytar from "keytar";
+import { ContextManager } from "./Agents/ContextManager";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 
 export async function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "testwizard" is now active!');
-	/* try {
+  // Use the console to output diagnostic information (console.log) and errors (console.error)
+  // This line of code will only be executed once when your extension is activated
+  console.log('Congratulations, your extension "testwizard" is now active!');
+  /* try {
 		let openAIKey = await vscode.window.showInputBox({
 			prompt: 'Please enter your OpenAI API Key',
 			password: true,
@@ -31,20 +30,26 @@ export async function activate(context: vscode.ExtensionContext) {
 	} catch (err) {
 		console.error(err);
 	} */
-	
-	const generateContext = vscode.commands.registerCommand('testwizard.generateContext', () => {
-		vscode.window.showInformationMessage('Generating test context ...');
-		if (vscode.workspace.workspaceFolders) {
-			vscode.workspace.workspaceFolders.forEach( async (folder) => {
-			  const manager = new ContextManager(folder);
-			  await manager.scanWorkspace();
-			});
-		} else {
-			vscode.window.showInformationMessage('Open a project to start using the TestWizard 🧙');
-		}
-	});
-	context.subscriptions.push(generateContext);
+
+  const generateContext = vscode.commands.registerCommand(
+    "testwizard.generateContext",
+    () => {
+      vscode.window.showInformationMessage("Generating test context ...");
+      if (vscode.workspace.workspaceFolders) {
+        vscode.workspace.workspaceFolders.forEach(async (folder) => {
+          const manager = new ContextManager(folder);
+          await manager.scanWorkspace();
+        });
+      } else {
+        vscode.window.showInformationMessage(
+          "Open a project to start using the TestWizard 🧙"
+        );
+      }
+    }
+  );
+  context.subscriptions.push(generateContext);
 }
 
 // This method is called when your extension is deactivated
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivate() {}

@@ -1,10 +1,10 @@
-import { OpenAI } from 'langchain/llms/openai';
-import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import {promisify} from 'util';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
-import PineconeDB from '../Database';
+import { OpenAI } from "langchain/llms/openai";
+import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import { promisify } from "util";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import PineconeDB from "../Database";
 import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
 
 export class ContextManager {
@@ -13,7 +13,7 @@ export class ContextManager {
   private pinecone: PineconeDB;
 
   constructor(workspaceFolder: vscode.WorkspaceFolder) {
-    console.log('ContextManager initialized', workspaceFolder);
+    console.log("ContextManager initialized", workspaceFolder);
     this.workspaceFolder = workspaceFolder;
     this.packageJsonCount = 0;
     this.pinecone = new PineconeDB();
@@ -27,10 +27,10 @@ export class ContextManager {
     await this.pinecone.createIndex();
     await this.pinecone.upsertVectors(docs);
     await this.pinecone.getTestStack();
-    console.log('DEBUG 2 -> ', docs);
-    
+    console.log("DEBUG 2 -> ", docs);
+
     if (this.packageJsonCount === 0) {
-        console.log('Project dependencies file not found');
+      console.log("Project dependencies file not found");
     }
   }
 
@@ -42,12 +42,12 @@ export class ContextManager {
       const files = await readdir(directory);
       for (const file of files) {
         const fullPath = path.join(directory, file);
-        if (fullPath.includes('node_modules')) continue; //eslint-disable-line
+        if (fullPath.includes("node_modules")) continue; //eslint-disable-line
         const stats = await stat(fullPath);
         if (stats.isDirectory()) {
           await this.scanDirectory(fullPath);
-        } else if (path.basename(fullPath) === 'package.json') {
-          console.log('Package.json file found in project ->', fullPath);
+        } else if (path.basename(fullPath) === "package.json") {
+          console.log("Package.json file found in project ->", fullPath);
           this.packageJsonCount++;
           const loader = new TextLoader(fullPath);
           docs = await loader.load();
@@ -59,6 +59,7 @@ export class ContextManager {
     } catch (err) {
       console.error(err);
     } finally {
+      // eslint-disable-next-line no-unsafe-finally
       return docs;
     }
   }
