@@ -3,6 +3,7 @@
   "displayName": "TestWizard",
   "description": "Let the TestWizard 🧙 generate your unit tests!",
   "version": "0.0.5",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.79.0"
   },

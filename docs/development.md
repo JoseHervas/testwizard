@@ -32,8 +32,6 @@
 > ⚠️ For obvious reasons, you need to be administrator to do the following action ⚠️
 
 - Run `npm version patch/minor/major` to increase the extension's version
-- In a new branch, edit the [CHANGELOG.md](../CHANGELOG.md) file with the changes
-- Add a new tag (`git tag -a "vYOUR-VERSION" -m "vYOUR-VERSION"`)
-- Push changes and the new tag (`git add . && git commit -m "Release new version" && git push origin main && git push --tags`)
+- Push changes and the new tag (`git push origin main && git push --tags`)
 
 There's a [Github Action workflow](../.github/workflows/deploy.yml) that automatically builds and deploys the new version to the VS Code Marketplace.
