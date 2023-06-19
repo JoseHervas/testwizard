@@ -7,6 +7,8 @@
   "engines": {
     "vscode": "^1.79.0"
   },
+  "publisher": "TheSolutioners",
+  "repository": "https://github.com/JoseHervas/testwizard",
   "categories": [
     "Other"
   ],
