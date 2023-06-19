@@ -9,8 +9,8 @@ export default class PineconeDB {
   private pinecone: PineconeClient;
   private index: any;
   // TODO -> Find a way to handle environment, maybe using docker?
-  private openAIApiKey = "your-openai-api-key-here";
-  private pineconeAPIKey = "your-pinecone-api-key-here";
+  private openAIApiKey: string | null = null;
+  private pineconeAPIKey: string | null = null;
 
   constructor() {
     this.pinecone = new PineconeClient();
@@ -18,11 +18,13 @@ export default class PineconeDB {
   }
 
   public async initDB() {
-    // const pineconeKey = await PineconeDB.getPineconeKey();
     console.log("Initializing Pinecone DB...");
+    // load API keys from keytar
+    this.pineconeAPIKey = await PineconeDB.getPineconeKey();
+    this.openAIApiKey = await PineconeDB.getOpenAIKey();
     await this.pinecone.init({
       environment: "us-west1-gcp-free",
-      apiKey: this.pineconeAPIKey,
+      apiKey: this.pineconeAPIKey!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
     });
   }
 
@@ -30,13 +32,13 @@ export default class PineconeDB {
     return this.pinecone.Index("test-wizard");
   }
 
-  /* private static async getOpenAIKey() {
+  private static async getOpenAIKey() {
         return await keytar.getPassword('testwizard', 'openAIKey');
     }
 
     private static async getPineconeKey() {
         return await keytar.getPassword('testwizard', 'pineconeKey');
-    } */
+    }
 
   public async createIndex(name = "test-wizard", dimension = 1536) {
     // 1536 is the default vector dimension for the OpenAI embedding
@@ -155,7 +157,7 @@ stack trace: TypeError: stream.getReader is not a function
     const question =
       "Tell me all the dependencies related to tests that this project has";
     const queryEmbedding = await new OpenAIEmbeddings({
-      openAIApiKey: this.openAIApiKey,
+      openAIApiKey: this.openAIApiKey!, // eslint-disable-line
     }).embedQuery(question);
     // 6. Query Pinecone index and return top 10 matches
     const queryResponse = await this.index.query({
@@ -172,7 +174,7 @@ stack trace: TypeError: stream.getReader is not a function
     console.log(`Asking question: ${question}...`);
     if (queryResponse.matches.length) {
       // 9. Create an OpenAI instance and load the QAStuffChain
-      const llm = new OpenAI({ openAIApiKey: this.openAIApiKey });
+      const llm = new OpenAI({ openAIApiKey: this.openAIApiKey! }); // eslint-disable-line
       const chain = loadQAStuffChain(llm);
       // 10. Extract and concatenate page content from matched documents
       const concatenatedPageContent = queryResponse.matches
