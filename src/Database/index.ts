@@ -20,8 +20,9 @@ export default class PineconeDB {
   public async initDB() {
     console.log("Initializing Pinecone DB...");
     // load API keys from keytar
-    this.pineconeAPIKey = await keytar.getPassword('testwizard', 'openAIKey');
-    this.openAIApiKey = await keytar.getPassword('testwizard', 'pineconeKey');
+    this.openAIApiKey = await keytar.getPassword('testwizard', 'openAIKey');
+    this.pineconeAPIKey = await keytar.getPassword('testwizard', 'pineconeKey');
+    console.log('Pinecone API Key ->', this.pineconeAPIKey)
     await this.pinecone.init({
       environment: "us-west1-gcp-free",
       apiKey: this.pineconeAPIKey!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
