@@ -1,11 +1,9 @@
 name: 🧪 Tests
 
 on:
+  push:
   pull_request:
     types: [opened]
-  push:
-    branches-ignore:
-      - main
 
 jobs:
   sonarcloud:
