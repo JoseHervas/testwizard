@@ -27,14 +27,20 @@ export class SecretsManager {
 
   async getSecrets() {
     if (!this.openAIApiKey || !this.pineconeAPIKey) {
-      this.pineconeAPIKey = await keytar.getPassword("testwizard", "openAIKey");
-      this.openAIApiKey = await keytar.getPassword("testwizard", "pineconeKey");
+      this.openAIApiKey = await keytar.getPassword(
+        "testwizard",
+        "openAIApiKey"
+      );
+      this.pineconeAPIKey = await keytar.getPassword(
+        "testwizard",
+        "pineconeAPIKey"
+      );
     }
     if (!this.pineconeAPIKey) {
       throw new Error("Missing pineconeAPIKey");
     }
     if (!this.openAIApiKey) {
-      throw new Error("Missing openAIKey");
+      throw new Error("Missing openAIApiKey");
     }
     return {
       openAIApiKey: this.openAIApiKey,
@@ -43,7 +49,7 @@ export class SecretsManager {
   }
 
   async setSecrets(openAIApiKey: string, pineconeAPIKey: string) {
-    keytar.setPassword("testwizard", "openAIKey", openAIApiKey);
+    keytar.setPassword("testwizard", "openAIApiKey", openAIApiKey);
     keytar.setPassword("testwizard", "pineconeAPIKey", pineconeAPIKey);
     this.pineconeAPIKey = pineconeAPIKey;
     this.openAIApiKey = openAIApiKey;
