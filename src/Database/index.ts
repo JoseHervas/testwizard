@@ -1,113 +1,97 @@
+// Pinecone
 import { PineconeClient } from "@pinecone-database/pinecone";
+
+// LangChain
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { OpenAI } from "langchain/llms/openai";
-import { loadQAStuffChain } from "langchain/chains";
 import { Document } from "langchain/document";
-import * as keytar from "keytar";
 
+// Local imports
+import { SecretsManager } from "../utils";
+
+/**
+ * Main client to talk to Pinecone
+ *
+ * It's a singleton to optimize the number of calls
+ * to pinecone.init()
+ */
 export default class PineconeDB {
+  private static instance: PineconeDB;
   private pinecone: PineconeClient;
   private index: any;
-  private openAIApiKey: string | null = null;
-  private pineconeAPIKey: string | null = null;
 
   constructor() {
     this.pinecone = new PineconeClient();
-    // this.initDB();
+    this.initDB();
   }
 
   public async initDB() {
-    console.log("Initializing Pinecone DB...");
-    // load API keys from keytar
-    this.pineconeAPIKey = await keytar.getPassword("testwizard", "openAIKey");
-    this.openAIApiKey = await keytar.getPassword("testwizard", "pineconeKey");
-    if (!this.pineconeAPIKey) {
-      throw new Error("Missing openAIKey");
-    }
+    const { pineconeAPIKey } = await SecretsManager.getInstance().getSecrets();
     await this.pinecone.init({
       environment: "us-west1-gcp-free",
-      apiKey: this.pineconeAPIKey,
+      apiKey: pineconeAPIKey,
     });
+    await this.createIndex();
+  }
+
+  /**
+   * Make this class a singleton, so we don't
+   * have to init the PineconeClient each time
+   * the ContextManager refreshes the project's context
+   */
+  public static getInstance(): PineconeDB {
+    if (!PineconeDB.instance) {
+      PineconeDB.instance = new PineconeDB();
+    }
+    return PineconeDB.instance;
+  }
+
+  public async createIndex(
+    name = "test-wizard",
+    dimension = 1536 // default vector dimension for the OpenAI embedding
+  ) {
+    const existingIndexes = await this.pinecone.listIndexes();
+    if (!existingIndexes.includes("test-wizard")) {
+      await this.pinecone.createIndex({
+        createRequest: {
+          name,
+          dimension,
+        },
+      });
+    }
   }
 
   public getIndex() {
     return this.pinecone.Index("test-wizard");
   }
 
-  public async createIndex(name = "test-wizard", dimension = 1536) {
-    // 1536 is the default vector dimension for the OpenAI embedding
-    console.log("Creating index...");
-    const existingIndexes = await this.pinecone.listIndexes();
-    console.log("Existing indexes ->", existingIndexes);
-    // TODO -> DEBUG INDEX CREATION ERROR IF NOT EXISTS
-    // This weird error happens when you have 1 index already created in pinecone - free starter plan only allows 1 index!!!
-    /**
-         * rejected promise not handled within 1 second: TypeError: stream.getReader is not a function
-extensionHostProcess.js:105
-stack trace: TypeError: stream.getReader is not a function
-    at /Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/src/index.ts:20:25
-    at step (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:48:23)
-    at Object.next (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:29:53)
-    at /Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:23:71
-    at new Promise (<anonymous>)
-    at __awaiter (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:19:12)
-    at streamToArrayBuffer (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:70:12)
-    at /Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/src/index.ts:42:36
-    at step (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:48:23)
-    at Object.throw (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:29:53)
-    at rejected (/Users/diegotellezbarrero/Desktop/testwizard/node_modules/@pinecone-database/pinecone/dist/index.js:21:65)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-         */
-    if (!existingIndexes.includes("test-wizard")) {
-      await this.pinecone.createIndex({
-        createRequest: {
-          name,
-          dimension,
-          metric: "cosine", // not sure this is needed
-        },
-      });
-      console.log("Index created ->", name);
-      // 7. Wait 60 seconds for index initialization
-      await new Promise((resolve) => setTimeout(resolve, 60000));
-      this.index = this.getIndex();
-      return;
-    }
-    this.index = this.getIndex();
-  }
-
-  public async upsertVectors(docs: Document[]) {
-    // 1. Process each document in the docs array
-
-    if (!this.openAIApiKey) return;
+  /**
+   * Receives an array of LangChain documents,
+   * creates embeddings for them using `OpenAIEmbeddings`
+   * and upserts them to Pinecone.
+   *
+   * Returns the number of errors encountered during the
+   * operation. If this number is not 0, you may want to
+   * alert the extension user.
+   */
+  public async createAndUpsertVectors(docs: Document[]) {
+    const { openAIApiKey } = await SecretsManager.getInstance().getSecrets();
+    let errorCount = 0;
     for (const doc of docs) {
-      console.log("DEBUGGGGGG ---- > ", doc);
-      console.log(`Processing document: ${doc.metadata.source}`);
       const txtPath = doc.metadata.source;
       const text = doc.pageContent;
-      // 2. Create RecursiveCharacterTextSplitter instance
+      // Split the doc in chunks
       const textSplitter = new RecursiveCharacterTextSplitter({
         chunkSize: 1000,
       });
-      console.log("Splitting text into chunks...");
-      // 3. Split text into chunks (documents)
       const chunks = await textSplitter.createDocuments([text]);
-      console.log(`Text split into ${chunks.length} chunks`);
-      console.log(
-        `Calling OpenAI's Embedding endpoint documents with ${chunks.length} text chunks ...`
-      );
-      // 4. Create OpenAI embeddings for documents
+      // Create OpenAI embeddings for chunks
       const embeddingsArrays = await new OpenAIEmbeddings({
-        openAIApiKey: this.openAIApiKey,
+        openAIApiKey,
       }).embedDocuments(
         chunks.map((chunk) => chunk.pageContent.replace(/\n/g, " "))
       );
-
-      console.log("Finished embedding documents");
-      console.log(
-        `Creating ${chunks.length} vectors array with id, values, and metadata...`
-      );
-      // 5. Create and upsert vectors in batches of 100
+      // Group the embeddings in batches of 100
       const batchSize = 100; // optimal number of batches to upload
       let batch = [];
       for (let idx = 0; idx < chunks.length; idx++) {
@@ -125,7 +109,6 @@ stack trace: TypeError: stream.getReader is not a function
         batch.push(vector);
         // When batch is full or it's the last item, upsert the vectors
         if (batch.length === batchSize || idx === chunks.length - 1) {
-          console.log("DEBUGING MISSING INDEX! ---> ", this.index);
           try {
             await this.index.upsert({
               upsertRequest: {
@@ -133,61 +116,17 @@ stack trace: TypeError: stream.getReader is not a function
               },
             });
           } catch (err) {
-            console.log("ERROR QUERYING PINECONE ---> ", err);
+            console.error(
+              `BATCH_UPLOAD_ERROR:: Batch number: ${idx} - Details: ${err}`
+            );
+            errorCount++;
           }
 
-          // Empty the batch
+          // Empty the batch to start a new iteration
           batch = [];
         }
       }
-      // 6. Log the number of vectors updated
-      console.log(`Pinecone index updated with ${chunks.length} vectors`);
     }
-  }
-
-  public async getTestStack() {
-    // 3. Start query process
-    console.log("Querying Pinecone vector store...");
-    // 5. Create query embedding
-    const question =
-      "Tell me all the dependencies related to tests that this project has";
-    const queryEmbedding = await new OpenAIEmbeddings({
-      openAIApiKey: this.openAIApiKey!, // eslint-disable-line
-    }).embedQuery(question);
-    // 6. Query Pinecone index and return top 10 matches
-    const queryResponse = await this.index.query({
-      queryRequest: {
-        topK: 10,
-        vector: queryEmbedding,
-        includeMetadata: true,
-        includeValues: true,
-      },
-    });
-    // 7. Log the number of matches
-    console.log(`Found ${queryResponse.matches.length} matches...`);
-    // 8. Log the question being asked
-    console.log(`Asking question: ${question}...`);
-    if (queryResponse.matches.length) {
-      // 9. Create an OpenAI instance and load the QAStuffChain
-      const llm = new OpenAI({ openAIApiKey: this.openAIApiKey! }); // eslint-disable-line
-      const chain = loadQAStuffChain(llm);
-      // 10. Extract and concatenate page content from matched documents
-      const concatenatedPageContent = queryResponse.matches
-        .map((match: any) => match.metadata.pageContent)
-        .join(" ");
-      // 11. Execute the chain with input documents and question
-      const result = await chain.call({
-        input_documents: [
-          // eslint-disable-line
-          new Document({ pageContent: concatenatedPageContent }),
-        ],
-        question: question,
-      });
-      // 12. Log the answer
-      console.log(`Answer: ${result.text}`);
-    } else {
-      // 13. Log that there are no matches, so GPT will not be queried
-      console.log("Since there are no matches, GPT will not be queried.");
-    }
+    return errorCount;
   }
 }
