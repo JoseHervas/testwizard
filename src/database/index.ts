@@ -18,7 +18,6 @@ import { SecretsManager } from "../utils";
 export default class PineconeDB {
   private static instance: PineconeDB;
   private pinecone: PineconeClient;
-  private index: any;
 
   constructor() {
     this.pinecone = new PineconeClient();
@@ -28,7 +27,7 @@ export default class PineconeDB {
   public async initDB() {
     const { pineconeAPIKey } = await SecretsManager.getInstance().getSecrets();
     await this.pinecone.init({
-      environment: "us-west1-gcp-free",
+      environment: "us-west4-gcp-free", //TODO: how can we make this dynamic to get the user's default env?
       apiKey: pineconeAPIKey,
     });
     await this.createIndex();
@@ -110,7 +109,7 @@ export default class PineconeDB {
         // When batch is full or it's the last item, upsert the vectors
         if (batch.length === batchSize || idx === chunks.length - 1) {
           try {
-            await this.index.upsert({
+            await this.getIndex().upsert({
               upsertRequest: {
                 vectors: batch,
               },
