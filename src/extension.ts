@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
           title: "Generating new test...",
           cancellable: false,
         },
-        (progress, token) => {
+        () => {
           // eslint-disable-next-line no-async-promise-executor
           return new Promise<void>(async (resolve, reject) => {
             if (vscode.workspace.workspaceFolders?.length) {
