@@ -5,10 +5,10 @@ import { OpenAI } from "langchain/llms/openai";
 import { loadQAStuffChain } from "langchain/chains";
 import { Document } from "langchain/document";
 import * as keytar from "keytar";
+
 export default class PineconeDB {
   private pinecone: PineconeClient;
   private index: any;
-  // TODO -> Find a way to handle environment, maybe using docker?
   private openAIApiKey: string | null = null;
   private pineconeAPIKey: string | null = null;
 
@@ -20,11 +20,14 @@ export default class PineconeDB {
   public async initDB() {
     console.log("Initializing Pinecone DB...");
     // load API keys from keytar
-    this.pineconeAPIKey = await keytar.getPassword('testwizard', 'openAIKey');
-    this.openAIApiKey = await keytar.getPassword('testwizard', 'pineconeKey');
+    this.pineconeAPIKey = await keytar.getPassword("testwizard", "openAIKey");
+    this.openAIApiKey = await keytar.getPassword("testwizard", "pineconeKey");
+    if (!this.pineconeAPIKey) {
+      throw new Error("Missing openAIKey");
+    }
     await this.pinecone.init({
       environment: "us-west1-gcp-free",
-      apiKey: this.pineconeAPIKey!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
+      apiKey: this.pineconeAPIKey,
     });
   }
 
@@ -73,7 +76,7 @@ stack trace: TypeError: stream.getReader is not a function
     this.index = this.getIndex();
   }
 
-  public async upsertVectors(docs: any) {
+  public async upsertVectors(docs: Document[]) {
     // 1. Process each document in the docs array
 
     if (!this.openAIApiKey) return;
