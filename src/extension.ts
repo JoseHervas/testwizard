@@ -3,7 +3,44 @@ import * as vscode from "vscode";
 
 // Local imports
 import { ContextManager } from "./agents/ContextManager";
-import { SecretsManager, errorMessages } from "./utils";
+import {
+  SecretsManager,
+  acceptedLanguages,
+  errorMessages,
+  getPathComponents,
+} from "./utils";
+import { TestGenerator } from "./agents/TestGenerator";
+import PineconeDB from "./database";
+import { Publisher } from "./agents/Publisher";
+
+/**
+ * Pinecone index creation can take up to
+ * 1 minute. We need to run this process
+ * as soon as the extension gets installed
+ * so we don't waste time when creating unit tests
+ */
+async function loadPinecone() {
+  return vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Initializing TestWizard 🧙...",
+      cancellable: false,
+    },
+    () => {
+      // eslint-disable-next-line no-async-promise-executor
+      return new Promise<void>(async (resolve, reject) => {
+        try {
+          await PineconeDB.getInstance();
+          resolve();
+        } catch (e) {
+          console.error(e);
+          vscode.window.showErrorMessage(errorMessages.PINECONE_INIT_ERROR);
+          reject();
+        }
+      });
+    }
+  );
+}
 
 export async function activate(context: vscode.ExtensionContext) {
   try {
@@ -33,47 +70,79 @@ export async function activate(context: vscode.ExtensionContext) {
         openAIApiKey,
         pineconeAPIKey
       );
-    }
-    console.error(err);
-    return vscode.window.showErrorMessage(errorMessages.SECRETS_MANAGER_ERROR);
-  }
-
-  const generateContext = vscode.commands.registerCommand(
-    "testwizard.generateContext",
-    () => {
-      vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Generating new test...",
-          cancellable: false,
-        },
-        () => {
-          // eslint-disable-next-line no-async-promise-executor
-          return new Promise<void>(async (resolve, reject) => {
-            if (vscode.workspace.workspaceFolders?.length) {
-              // TODO: make this work with multiple workspaces at the same time
-              // for the moment, we'll use only the 1st opened one
-              const folder = vscode.workspace.workspaceFolders[0];
-              const manager = new ContextManager(folder);
-              await manager.identifyAndUploadProjectContext();
-              const techStack = await manager.getTestStack();
-              console.log(techStack);
-              vscode.window.showInformationMessage(
-                "New test generated successfully!"
-              );
-              resolve();
-            } else {
-              vscode.window.showErrorMessage(
-                "Open a project to start using the TestWizard 🧙"
-              );
-              reject();
-            }
-          });
-        }
+    } else {
+      console.error(err);
+      return vscode.window.showErrorMessage(
+        errorMessages.SECRETS_MANAGER_ERROR
       );
     }
+  }
+
+  await loadPinecone();
+
+  const generateTest = vscode.commands.registerCommand(
+    "testwizard.generateTest",
+    async () => {
+      if (vscode.workspace.workspaceFolders?.length) {
+        const folder = vscode.workspace.workspaceFolders[0];
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+          const languageId = editor.document.languageId;
+          if (acceptedLanguages.includes(languageId)) {
+            vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Generating new test. This may take some minutes...",
+                cancellable: false,
+              },
+              () => {
+                // eslint-disable-next-line no-async-promise-executor
+                return new Promise<void>(async (resolve, reject) => {
+                  // Identify the project's context
+                  const manager = new ContextManager(folder);
+                  await manager.identifyProjectContext();
+                  // Generate a new unit test
+                  const selectedText = editor.document.getText(
+                    editor.selection
+                  );
+                  const fullText = editor.document.getText();
+                  const generator = new TestGenerator();
+                  const generatedTest = await generator.generateTest(
+                    selectedText,
+                    fullText,
+                    editor.document.fileName,
+                    languageId
+                  );
+                  // console.log(test);
+                  // Finish
+                  const publisher = new Publisher();
+                  const { filePath, fileBaseName } = getPathComponents(
+                    editor.document.fileName
+                  );
+                  await publisher.outputTest(
+                    filePath,
+                    fileBaseName,
+                    generatedTest
+                  );
+                  vscode.window.showInformationMessage(
+                    "New test generated successfully!"
+                  );
+                  resolve();
+                });
+              }
+            );
+          } else {
+            vscode.window.showErrorMessage(errorMessages.NO_SUPPORTED_LANGUAGE);
+          }
+        } else {
+          vscode.window.showErrorMessage(errorMessages.NO_EDITOR);
+        }
+      } else {
+        vscode.window.showErrorMessage(errorMessages.NO_PROJECT);
+      }
+    }
   );
-  context.subscriptions.push(generateContext);
+  context.subscriptions.push(generateTest);
 }
 
 // This method is called when your extension is deactivated

@@ -4,18 +4,15 @@ import * as path from "path";
 import { promisify } from "util";
 
 // LangChain
-import { OpenAI } from "langchain/llms/openai";
-import { loadQAStuffChain } from "langchain/chains";
 import { Document } from "langchain/document";
 import { TextLoader } from "langchain/document_loaders/fs/text";
-import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 
 // VS Code
 import * as vscode from "vscode";
 
 // Relative imports
-import PineconeDB from "../database";
-import { SecretsManager, errorMessages } from "../utils";
+import { errorMessages } from "../utils";
+import { VectorMemory } from "../memory";
 
 /**
  * Usually projects contain a file in which
@@ -63,12 +60,11 @@ const foldersToSkipScanning = [
  * relevant tests optimized for the project's configuration
  */
 export class ContextManager {
+  private memory?: VectorMemory;
   private workspaceFolder: vscode.WorkspaceFolder;
-  private pinecone: PineconeDB;
 
   constructor(workspaceFolder: vscode.WorkspaceFolder) {
     this.workspaceFolder = workspaceFolder;
-    this.pinecone = PineconeDB.getInstance();
   }
 
   /**
@@ -109,66 +105,21 @@ export class ContextManager {
   }
 
   /**
-   * Gets the project context and uploads it to Pinecone
-   * to be used later on the TestGenerator
+   * Uploads to Pinecone the proyect's context,
+   * so TestGenerator can take it into account
    */
-  public async identifyAndUploadProjectContext() {
+  public async identifyProjectContext() {
     const depsFile = await this.scanDirectory(this.workspaceFolder.uri.fsPath);
     if (depsFile.length === 0) {
       return vscode.window.showErrorMessage(errorMessages.MISSING_DEPS_FILE);
     }
-    const errors = await this.pinecone.createAndUpsertVectors(depsFile);
-    if (errors) {
-      vscode.window.showErrorMessage(
-        errorMessages.PROJECT_CONTEXT_UPLOAD_ERROR
-      );
-    }
-  }
-
-  /**
-   * Retrieves the project's context from Pinecone.
-   *
-   * Useful to generate meaningful tests that take
-   * the project's context into account
-   */
-  public async getTestStack() {
-    // Prepare the query
-    const { openAIApiKey } = await SecretsManager.getInstance().getSecrets();
-    const question =
-      "Tell me all the dependencies related to tests that this project has";
-    const queryEmbedding = await new OpenAIEmbeddings({
-      openAIApiKey,
-    }).embedQuery(question);
-    // Send query to Pinetone
-    const queryResponse = await this.pinecone.getIndex().query({
-      queryRequest: {
-        topK: 10,
-        vector: queryEmbedding,
-        includeMetadata: true,
-        includeValues: true,
+    this.memory = new VectorMemory();
+    await this.memory.init();
+    await this.memory.getStore()?.saveContext(
+      {
+        input: `This is the configuration file of my project: ${depsFile[0].pageContent}`,
       },
-    });
-    if (queryResponse?.matches?.length) {
-      // Extract and concatenate page content from matched documents
-      const concatenatedPageContent = queryResponse.matches
-        .map(
-          (match) => (match?.metadata as { pageContent: string })?.pageContent
-        )
-        .join(" ");
-      // Use langchain's magic 🪄
-      const llm = new OpenAI({ openAIApiKey });
-      const chain = loadQAStuffChain(llm);
-      const result = await chain.call({
-        input_documents: [
-          new Document({ pageContent: concatenatedPageContent }),
-        ],
-        question: question,
-      });
-      return result.text;
-    } else {
-      vscode.window.showErrorMessage(
-        errorMessages.PROJECT_CONTEXT_RETRIEVAL_ERROR
-      );
-    }
+      { output: "okay" }
+    );
   }
 }

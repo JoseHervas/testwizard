@@ -21,7 +21,6 @@ export default class PineconeDB {
 
   constructor() {
     this.pinecone = new PineconeClient();
-    this.initDB();
   }
 
   public async initDB() {
@@ -38,9 +37,10 @@ export default class PineconeDB {
    * have to init the PineconeClient each time
    * the ContextManager refreshes the project's context
    */
-  public static getInstance(): PineconeDB {
+  public static async getInstance(): Promise<PineconeDB> {
     if (!PineconeDB.instance) {
       PineconeDB.instance = new PineconeDB();
+      await PineconeDB.instance.initDB();
     }
     return PineconeDB.instance;
   }
