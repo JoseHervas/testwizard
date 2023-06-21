@@ -41,19 +41,36 @@ export async function activate(context: vscode.ExtensionContext) {
   const generateContext = vscode.commands.registerCommand(
     "testwizard.generateContext",
     () => {
-      vscode.window.showInformationMessage("Generating test context ...");
-      if (vscode.workspace.workspaceFolders) {
-        vscode.workspace.workspaceFolders.forEach(async (folder) => {
-          const manager = new ContextManager(folder);
-          await manager.identifyAndUploadProjectContext();
-          const techStack = await manager.getTestStack();
-          console.log(techStack);
-        });
-      } else {
-        vscode.window.showInformationMessage(
-          "Open a project to start using the TestWizard 🧙"
-        );
-      }
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Generating new test...",
+          cancellable: false,
+        },
+        () => {
+          // eslint-disable-next-line no-async-promise-executor
+          return new Promise<void>(async (resolve, reject) => {
+            if (vscode.workspace.workspaceFolders?.length) {
+              // TODO: make this work with multiple workspaces at the same time
+              // for the moment, we'll use only the 1st opened one
+              const folder = vscode.workspace.workspaceFolders[0];
+              const manager = new ContextManager(folder);
+              await manager.identifyAndUploadProjectContext();
+              const techStack = await manager.getTestStack();
+              console.log(techStack);
+              vscode.window.showInformationMessage(
+                "New test generated successfully!"
+              );
+              resolve();
+            } else {
+              vscode.window.showErrorMessage(
+                "Open a project to start using the TestWizard 🧙"
+              );
+              reject();
+            }
+          });
+        }
+      );
     }
   );
   context.subscriptions.push(generateContext);

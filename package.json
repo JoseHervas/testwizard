@@ -18,9 +18,16 @@
     "commands": [
       {
         "command": "testwizard.generateContext",
-        "title": "🧪 Generate Project Test Stack Context"
+        "title": "TestWizard 🧙‍♂️"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "testwizard.generateContext"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify",
