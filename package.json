@@ -17,14 +17,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "testwizard.generateContext",
+        "command": "testwizard.generateTest",
         "title": "TestWizard 🧙‍♂️"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "testwizard.generateContext"
+          "command": "testwizard.generateTest"
         }
       ]
     }
