@@ -47,13 +47,15 @@ export class TestGenerator {
 
         Current task: {input}`);
 
-    const task = `Write a valid unit test for this part of the code:
+    const task = `Write only one valid unit test for this part of the code:
 
     \`\`\`${language}
     ${selectedCode} 
     \`\`\`
 
-    Assuming this test is written on a file located next to the main file.
+    Write only one assertion.
+
+    Assuming your test is going to be written to a file next to the file we're testing, include all the required imports. Use relative imports for the local files.
     `;
     const chain = new LLMChain({
       llm: model,
@@ -64,12 +66,13 @@ export class TestGenerator {
       input: task,
     });
 
-    // ChatGPT is prune to emit the word "output:"
     const code = result.text;
-    if (code.includes("output:")) {
-      return code.split("output:").join("");
-    }
+    // We need to cleanup unwanted preffixes on the response
+    const stopwords = ["output:", "text:"];
+    const codeWithoutStopwords = stopwords.reduce((code, stopword) => {
+      return code.split(stopword).join("");
+    }, code);
 
-    return code;
+    return codeWithoutStopwords;
   }
 }
