@@ -22,6 +22,8 @@ export const errorMessages = {
 
 export const acceptedLanguages = ["typescript", "javascript", "python", "ruby"];
 
+export const stopwords = ["output:", "text:", "Answer:"];
+
 export function getPathComponents(fullPath: string) {
   const filePathComponents = fullPath.split(sep);
   const fileName = filePathComponents[filePathComponents.length - 1];
@@ -31,3 +33,4 @@ export function getPathComponents(fullPath: string) {
   const fileBaseName = fileName.split(".")[0];
   return { filePath, fileBaseName };
 }
+

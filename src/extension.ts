@@ -12,7 +12,7 @@ import {
 import { TestGenerator } from "./agents/TestGenerator";
 import PineconeDB from "./database";
 import { Publisher } from "./agents/Publisher";
-
+import { Evaluator } from "./agents/Evaluator";
 /**
  * Pinecone index creation can take up to
  * 1 minute. We need to run this process
@@ -119,13 +119,21 @@ export async function activate(context: vscode.ExtensionContext) {
                   const { filePath, fileBaseName } = getPathComponents(
                     editor.document.fileName
                   );
-                  await publisher.outputTest(
+                  const testPath = await publisher.outputTest(
                     filePath,
                     fileBaseName,
                     generatedTest
                   );
                   vscode.window.showInformationMessage(
                     "New test generated successfully!"
+                  );
+                  vscode.window.showInformationMessage(
+                    "Evaluating new test!"
+                  );
+                  const evaluator = new Evaluator
+                  await evaluator.executeTest(testPath);
+                  vscode.window.showInformationMessage(
+                    "Test has been evaluated!"
                   );
                   resolve();
                 });
@@ -147,4 +155,4 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate() {}
+export function deactivate() { }
