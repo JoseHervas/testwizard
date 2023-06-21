@@ -97,7 +97,7 @@ export async function activate(context: vscode.ExtensionContext) {
               },
               () => {
                 // eslint-disable-next-line no-async-promise-executor
-                return new Promise<void>(async (resolve, reject) => {
+                return new Promise<void>(async (resolve) => {
                   // Identify the project's context
                   const manager = new ContextManager(folder);
                   await manager.identifyProjectContext();
