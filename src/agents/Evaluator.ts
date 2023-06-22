@@ -45,7 +45,7 @@ export class Evaluator {
         });
     }
 
-    public async depurateCommand(rawCommand: string) {
+    public depurateCommand(rawCommand: string) {
         const commandWithoutStopwords = stopwords.reduce((code, stopword) => {
             return code.split(stopword).join("");
         }, rawCommand);
@@ -73,6 +73,7 @@ export class Evaluator {
         const rawCommand = result.text;
 
         const clearCommand = this.depurateCommand(rawCommand);
+        console.log('DEBUG: clearCommand', clearCommand);
         const syncExec = promisify(exec);
 
         try {
