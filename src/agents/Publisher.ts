@@ -2,6 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { promisify } from "util";
+import { WorkspaceFolder } from "vscode";
 
 export class Publisher {
   public async outputTest(directory: string, filename: string, code: string): Promise<string> {
@@ -18,6 +19,16 @@ export class Publisher {
       } else {
         throw e;
       }
+    }
+  }
+  public async outputDockerfile(directory: WorkspaceFolder, content: string): Promise<string> {
+    const write = promisify(fs.writeFile);
+    try {
+      const dockerfilePath = path.join(directory.uri.fsPath, 'Dockerfile');
+      await write(dockerfilePath, content);
+      return dockerfilePath;
+    } catch (e) {
+      throw e;
     }
   }
 }

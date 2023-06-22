@@ -133,7 +133,7 @@ export async function activate(context: vscode.ExtensionContext) {
                   // Evaluate the new test
                   const evaluator = new Evaluator
                   await evaluator.init()
-                  await evaluator.executeTest(testPath);
+                  await evaluator.executeTest(testPath, folder);
                   vscode.window.showInformationMessage(
                     "Test has been evaluated!"
                   );
