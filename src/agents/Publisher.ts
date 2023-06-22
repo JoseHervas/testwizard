@@ -9,7 +9,7 @@ export class Publisher {
     const fileExtension = ".spec.ts"; // TODO: Make this smarter, could be asking the LLM.
     try {
       const testPath = path.join(directory, `${filename}${fileExtension}`);
-      write(testPath, code);
+      await write(testPath, code);
       return testPath; // I assumed file extension will be dinamic when multilanguage support is added. So I return the path to the test file instead of generating in extension.ts
     } catch (e) {
       if ((e as Error).message.includes("EEXIST")) {
