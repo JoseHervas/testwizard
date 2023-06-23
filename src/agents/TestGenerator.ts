@@ -4,7 +4,7 @@ import { PromptTemplate } from "langchain/prompts";
 import { LLMChain } from "langchain/chains";
 
 // Relative imports
-import { SecretsManager } from "../utils";
+import { SecretsManager, stopwords } from "../utils";
 import { VectorMemory } from "../memory";
 
 /**
@@ -68,7 +68,6 @@ export class TestGenerator {
 
     const code = result.text;
     // We need to cleanup unwanted preffixes on the response
-    const stopwords = ["output:", "text:"];
     const codeWithoutStopwords = stopwords.reduce((code, stopword) => {
       return code.split(stopword).join("");
     }, code);
