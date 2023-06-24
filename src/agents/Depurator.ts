@@ -5,7 +5,6 @@ import { spawnSync } from "child_process";
 import { LLMChain } from "langchain/chains";
 import { PromptTemplate } from "langchain/prompts";
 import { OpenAI } from "langchain/llms/openai";
-import { VectorStoreRetrieverMemory } from "langchain/memory";
 
 //Relative imports
 import { SecretsManager, stopwords } from "../utils";
@@ -119,8 +118,8 @@ export class TestDepurator {
       const stdout = commandResult.output[1] ? commandResult.output[1].toString() : '';
       const stderr = commandResult.output[2] ? commandResult.output[2].toString() : '';
 
-      console.log("stdout: ", stdout);
-      console.log("stderr: ", stderr);
+      console.log("stdout: ", stdout); // TODO: Remove this
+      console.log("stderr: ", stderr); // TODO: Remove this
       // console.log(JSON.stringify(commandResult));
       if (commandResult.status !== 0) {
         // There are errors on the generated test
@@ -130,10 +129,6 @@ export class TestDepurator {
         if (this.i < this.maxIterations) {
           console.log(`Trying to fix (iteration ${this.i})...`);
           this.i++;
-
-          /* const template = `The test you generated failed with this error message: ${stderr}. Write a new and fixed version of the test making sure you don't repeat the same code you wrote before and that it is written in the same programming language and style.`;
-
-          const task = PromptTemplate.fromTemplate(template); */
 
           const task = `The test you generated failed with this error message: ${stderr}. Write a new and fixed version of the test making sure your don't repeat the same code you wrote before and that it written in the same programming language and style.`;
 
@@ -151,8 +146,9 @@ export class TestDepurator {
           );
         }
       } else {
+        // Happy path is ready, if test passes this code is reached
         console.log("Test works!!!!");
-        console.log("stdout", stdout);
+        console.log("result", stderr); // Output of the test is in stderr
       }
     } catch (e) {
       // invalid command

@@ -55,7 +55,7 @@ export class TestGenerator {
 
     Write only one assertion.
 
-    Assuming your test is going to be written to a file in the same directory to the file we're testing, include all the required imports. Use relative imports for the local files.
+    Assuming your test is going to be written to a file in the same directory that the file we're testing, include all the necessary imports using relative paths to local files. Avoid importing 'expect' or any other testing library.
     `;
     const chain = new LLMChain({
       llm: model,
