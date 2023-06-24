@@ -12,7 +12,7 @@ import {
 import { TestGenerator } from "./agents/TestGenerator";
 import PineconeDB from "./database";
 import { Publisher } from "./agents/Publisher";
-import { Evaluator } from "./agents/Evaluator";
+import { TestDepurator } from "./agents/Depurador";
 /**
  * Pinecone index creation can take up to
  * 1 minute. We need to run this process
@@ -113,29 +113,19 @@ export async function activate(context: vscode.ExtensionContext) {
                     editor.document.fileName,
                     languageId
                   );
-                  // console.log(test);
-                  // Finish
-                  const publisher = new Publisher();
+                  // Depurate the new test
                   const { filePath, fileBaseName } = getPathComponents(
                     editor.document.fileName
                   );
-                  const testPath = await publisher.outputTest(
+                  const depurator = new TestDepurator(
                     filePath,
                     fileBaseName,
                     generatedTest
                   );
+                  await depurator.init();
+                  await depurator.reviewTest();
                   vscode.window.showInformationMessage(
-                    "New test generated successfully!"
-                  );
-                  vscode.window.showInformationMessage(
-                    "Evaluating new test!"
-                  );
-                  // Evaluate the new test
-                  const evaluator = new Evaluator
-                  await evaluator.init()
-                  await evaluator.executeTest(testPath);
-                  vscode.window.showInformationMessage(
-                    "Test has been evaluated!"
+                    "Your new test is ready 🧙!"
                   );
                   resolve();
                 });
@@ -157,4 +147,4 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate() { }
+export function deactivate() {}
