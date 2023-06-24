@@ -1,7 +1,6 @@
 // NodeJS defaults
-import { exec } from "child_process";
+import { spawnSync } from "child_process";
 import { promisify } from "util";
-const syncExec = promisify(exec);
 
 // LangChain
 import { LLMChain } from "langchain/chains";
@@ -109,20 +108,24 @@ export class TestDepurator {
 
     try {
       // Run the test
-      const { stdout, stderr } = await syncExec(
-        `${this.runCommand} ${testPath}`
+      const commandResult = spawnSync(
+        `${this.runCommand}`
       );
-      if (stderr) {
+      console.log(commandResult.error);
+      if (commandResult.status !== 0) {
         // There are errors on the generated test
         console.log("Test failed");
-        console.log("stdout: ", stdout);
+        console.log("stdout: ", commandResult.stdout);
+        console.log("stderr: ", commandResult.stderr);
+
         if (this.i < this.maxIterations) {
           console.log(`Trying to fix (iteration ${this.i})...`);
-          const task = `The test you generated failed with this error message: ${stderr}. Write a fixed version of the test`;
-          const result = await this.chain.call({
+          this.i++;
+          const task = `The test you generated failed with this error message: ${commandResult.stderr}. Write a fixed version of the test`;
+          const chainResult = await this.chain.call({
             input: task,
           });
-          const rawResponse = result.text;
+          const rawResponse = chainResult.text;
           const clearResponse = this.depurateCommand(rawResponse);
           this.code = clearResponse;
           await this.reviewTest();
@@ -133,7 +136,7 @@ export class TestDepurator {
         }
       } else {
         console.log("Test works!!!!");
-        console.log("stderr", stderr);
+        console.log("stderr", commandResult.stdout);
       }
     } catch (e) {
       // invalid command
