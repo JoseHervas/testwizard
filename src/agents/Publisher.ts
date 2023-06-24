@@ -4,9 +4,13 @@ import * as path from "path";
 import { promisify } from "util";
 
 export class Publisher {
-  public async outputTest(directory: string, filename: string, code: string): Promise<string> {
+  public async outputTest(
+    directory: string,
+    filename: string,
+    code: string
+  ): Promise<string> {
     const write = promisify(fs.writeFile);
-    const fileExtension = ".spec.ts"; // TODO: Make this smarter, could be asking the LLM.
+    const fileExtension = ".spec.js"; // TODO: Make this smarter, could be asking the LLM.
     try {
       const testPath = path.join(directory, `${filename}${fileExtension}`);
       await write(testPath, code);
