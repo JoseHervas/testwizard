@@ -111,20 +111,26 @@ export class TestDepurator {
       // Run the test
       const npx = 'npx';
       const args = this.runCommand.split(' ');
+      // Run command and capture the output
       const commandResult = spawnSync(
-        npx, args, { stdio: 'inherit', cwd: this.directory }
+        npx, args, { stdio: 'pipe', cwd: this.directory }
       );
-      console.log(commandResult.error);
+      // Convert buffers to strings
+      const stdout = commandResult.output[1] ? commandResult.output[1].toString() : '';
+      const stderr = commandResult.output[2] ? commandResult.output[2].toString() : '';
+
+      console.log("stdout: ", stdout);
+      console.log("stderr: ", stderr);
+      // console.log(JSON.stringify(commandResult));
       if (commandResult.status !== 0) {
         // There are errors on the generated test
         console.log("Test failed");
-        console.log("stdout: ", commandResult.stdout);
-        console.log("stderr: ", commandResult.stderr);
+        console.log("stderr: ", stderr);
 
         if (this.i < this.maxIterations) {
           console.log(`Trying to fix (iteration ${this.i})...`);
           this.i++;
-          const task = `The test you generated failed with this error message: ${commandResult.stderr}. Write a fixed version of the test`;
+          const task = `The test you generated failed with this error message: ${stderr}. Write a fixed version of the test`;
           const chainResult = await this.chain.call({
             input: task,
           });
@@ -139,7 +145,7 @@ export class TestDepurator {
         }
       } else {
         console.log("Test works!!!!");
-        console.log("stderr", commandResult.stdout);
+        console.log("stdout", stdout);
       }
     } catch (e) {
       // invalid command
