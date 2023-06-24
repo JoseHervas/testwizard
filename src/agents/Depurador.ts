@@ -81,13 +81,21 @@ export class TestDepurator {
       );
     }
 
+    // Write the test to the user's filesystem
+    const publisher = new Publisher();
+    const testPath = await publisher.outputTest(
+      this.directory,
+      this.filename,
+      this.code
+    );
+
     /**
      * Cache the runCommand on the class
      * so we don't call the chain more times
      * than necessary
      */
     if (!this.runCommand) {
-      const task = `Tell me the appropiate command to run the tests on this project`;
+      const task = `Tell me the appropiate command to run the test ${testPath} on my terminal`;
       const result = await this.chain.call({
         input: task,
       });
@@ -97,14 +105,6 @@ export class TestDepurator {
       console.log("Command to run the test: ", clearCommand);
       this.runCommand = clearCommand;
     }
-
-    // Write the test to the user's filesystem
-    const publisher = new Publisher();
-    const testPath = await publisher.outputTest(
-      this.directory,
-      this.filename,
-      this.code
-    );
 
     try {
       // Run the test
