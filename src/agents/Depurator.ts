@@ -1,11 +1,11 @@
 // NodeJS defaults
 import { spawnSync } from "child_process";
-import { promisify } from "util";
 
 // LangChain
 import { LLMChain } from "langchain/chains";
 import { PromptTemplate } from "langchain/prompts";
 import { OpenAI } from "langchain/llms/openai";
+import { VectorStoreRetrieverMemory } from "langchain/memory";
 
 //Relative imports
 import { SecretsManager, stopwords } from "../utils";
@@ -62,7 +62,7 @@ export class TestDepurator {
     });
   }
 
-  public depurateCommand(rawCommand: string) {
+  public depurateChainOutput(rawCommand: string) {
     const commandWithoutStopwords = stopwords.reduce((code, stopword) => {
       return code.split(stopword).join("");
     }, rawCommand);
@@ -101,7 +101,7 @@ export class TestDepurator {
         input: task,
       });
       const rawCommand = result.text;
-      const clearCommand = this.depurateCommand(rawCommand);
+      const clearCommand = this.depurateChainOutput(rawCommand);
 
       console.log("Command to run the test: ", clearCommand);
       this.runCommand = clearCommand;
@@ -130,13 +130,20 @@ export class TestDepurator {
         if (this.i < this.maxIterations) {
           console.log(`Trying to fix (iteration ${this.i})...`);
           this.i++;
-          const task = `The test you generated failed with this error message: ${stderr}. Write a fixed version of the test`;
+
+          /* const template = `The test you generated failed with this error message: ${stderr}. Write a new and fixed version of the test making sure you don't repeat the same code you wrote before and that it is written in the same programming language and style.`;
+
+          const task = PromptTemplate.fromTemplate(template); */
+
+          const task = `The test you generated failed with this error message: ${stderr}. Write a new and fixed version of the test making sure your don't repeat the same code you wrote before and that it written in the same programming language and style.`;
+
           const chainResult = await this.chain.call({
             input: task,
           });
           const rawResponse = chainResult.text;
-          const clearResponse = this.depurateCommand(rawResponse);
-          this.code = clearResponse;
+          const newTestCode = this.depurateChainOutput(rawResponse);
+          this.code = newTestCode;
+          console.log("DEBUG ->>>>>> New test: \n", this.code);
           await this.reviewTest();
         } else {
           console.log(
