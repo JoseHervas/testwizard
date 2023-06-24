@@ -11,8 +11,7 @@ import {
 } from "./utils";
 import { TestGenerator } from "./agents/TestGenerator";
 import PineconeDB from "./database";
-import { Publisher } from "./agents/Publisher";
-import { TestDepurator } from "./agents/Depurador";
+import { TestDepurator } from "./agents/Depurator";
 /**
  * Pinecone index creation can take up to
  * 1 minute. We need to run this process
@@ -147,4 +146,4 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate() {}
+export function deactivate() { }
