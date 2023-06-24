@@ -4,7 +4,8 @@ import { promisify } from "util";
 const syncExec = promisify(exec);
 
 // LangChain
-import { LLMChain, PromptTemplate } from "langchain";
+import { LLMChain } from "langchain/chains";
+import { PromptTemplate } from "langchain/prompts";
 import { OpenAI } from "langchain/llms/openai";
 
 //Relative imports
