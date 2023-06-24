@@ -29,7 +29,7 @@ export class TestDepurator {
   private code: string;
 
   // control the number of depuration iterations
-  private maxIterations = 5;
+  private maxIterations = 1;
   private i = 0;
 
   constructor(directory: string, filename: string, code: string) {
@@ -95,7 +95,8 @@ export class TestDepurator {
      * than necessary
      */
     if (!this.runCommand) {
-      const task = `Tell me the appropiate command to run the test ${testPath} on my terminal`;
+      // const task = `Tell me the appropiate command to run the test ${testPath} on my terminal`;
+      const task = `I have a test located on ${testPath}. According to this projects configuration file, tell me the appropiate command to run this test only in my terminal.`
       const result = await this.chain.call({
         input: task,
       });
@@ -108,8 +109,10 @@ export class TestDepurator {
 
     try {
       // Run the test
+      const npx = 'npx';
+      const args = this.runCommand.split(' ');
       const commandResult = spawnSync(
-        `${this.runCommand}`
+        npx, args, { stdio: 'inherit', cwd: this.directory }
       );
       console.log(commandResult.error);
       if (commandResult.status !== 0) {
