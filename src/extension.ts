@@ -11,8 +11,7 @@ import {
 } from "./utils";
 import { TestGenerator } from "./agents/TestGenerator";
 import PineconeDB from "./database";
-import { Publisher } from "./agents/Publisher";
-import { TestDepurator } from "./agents/Depurador";
+import { TestDepurator } from "./agents/Depurator";
 /**
  * Pinecone index creation can take up to
  * 1 minute. We need to run this process
@@ -123,11 +122,33 @@ export async function activate(context: vscode.ExtensionContext) {
                     generatedTest
                   );
                   await depurator.init();
-                  await depurator.reviewTest();
-                  vscode.window.showInformationMessage(
-                    "Your new test is ready 🧙!"
-                  );
+                  let result = await depurator.reviewTest();
+                  while (!result.success) {
+                    if (result.output === 'maxIterationPassed') {
+                      vscode.window.showInformationMessage(
+                        "🧙 TestWizard has tried 5 times, but couldn't solve the test. Your turn, human! Can you outsmart the AI?"
+                      );
+                      break;
+                    }
+                    // Generate a new test based on the previous one feeding the Generator with the error message
+                    const newTest = await generator.generateTest(
+                      selectedText,
+                      fullText,
+                      editor.document.fileName,
+                      languageId,
+                      result.output,
+                    );
+                    // Review the new test
+                    result = await depurator.reviewTest(newTest);
+                  }
+                  if (result.success) {
+                    vscode.window.showInformationMessage(
+                      "Your new test is ready 🧙!"
+                    );
+                  }
+
                   resolve();
+
                 });
               }
             );
@@ -147,4 +168,4 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate() {}
+export function deactivate() { }

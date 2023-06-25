@@ -19,7 +19,8 @@ export class TestGenerator {
     selectedCode: string,
     fullCode: string,
     filePath: string,
-    language: string
+    language: string,
+    testError?: string,
   ) {
     const { openAIApiKey } = await SecretsManager.getInstance().getSecrets();
     const model = new OpenAI({ openAIApiKey });
@@ -47,7 +48,11 @@ export class TestGenerator {
 
         Current task: {input}`);
 
-    const task = `Write only one valid unit test for this part of the code:
+    // TODO: Delete the intentional error in the first generation where there is no testError (line#73)
+    const task = testError ? `
+    Previous test failed with the following error: ${testError}
+
+    Help the human fix it and again write only one valid unit test for this part of the code:
 
     \`\`\`${language}
     ${selectedCode} 
@@ -55,7 +60,19 @@ export class TestGenerator {
 
     Write only one assertion.
 
-    Assuming your test is going to be written to a file next to the file we're testing, include all the required imports. Use relative imports for the local files.
+    Assuming your test is going to be written to a file in the same directory that the file we're testing, include all the necessary imports using relative paths to local files. Avoid importing 'expect' or any other testing library.
+    `
+      : `Write only one valid unit test for this part of the code:
+
+    \`\`\`${language}
+    ${selectedCode} 
+    \`\`\`
+
+    Write only one assertion.
+
+    Add one error line to the test that will require the Human to fix the code.
+
+    Assuming your test is going to be written to a file in the same directory that the file we're testing, include all the necessary imports using relative paths to local files. Avoid importing 'expect' or any other testing library.
     `;
     const chain = new LLMChain({
       llm: model,
@@ -68,9 +85,14 @@ export class TestGenerator {
 
     const code = result.text;
     // We need to cleanup unwanted preffixes on the response
-    const codeWithoutStopwords = stopwords.reduce((code, stopword) => {
+    let codeWithoutStopwords = stopwords.reduce((code, stopword) => {
       return code.split(stopword).join("");
     }, code);
+    // remove blank lines at the start of the string
+    codeWithoutStopwords = codeWithoutStopwords.replace(/^\s*\n/gm, '');
+
+    // ensure there is only one newline at the end
+    codeWithoutStopwords = codeWithoutStopwords.trimEnd() + "\n";
 
     return codeWithoutStopwords;
   }

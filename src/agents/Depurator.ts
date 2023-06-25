@@ -1,16 +1,20 @@
 // NodeJS defaults
-import { exec } from "child_process";
-import { promisify } from "util";
-const syncExec = promisify(exec);
+import { spawnSync } from "child_process";
 
 // LangChain
-import { LLMChain, PromptTemplate } from "langchain";
+import { LLMChain } from "langchain/chains";
+import { PromptTemplate } from "langchain/prompts";
 import { OpenAI } from "langchain/llms/openai";
 
 //Relative imports
 import { SecretsManager, stopwords } from "../utils";
 import { VectorMemory } from "../memory";
 import { Publisher } from "./Publisher";
+
+interface TestReviewerResponse {
+  success: boolean;
+  output: string;
+}
 
 /**
  * Checks the output of TestGenerator and
@@ -62,7 +66,7 @@ export class TestDepurator {
     });
   }
 
-  public depurateCommand(rawCommand: string) {
+  public depurateChainOutput(rawCommand: string) {
     const commandWithoutStopwords = stopwords.reduce((code, stopword) => {
       return code.split(stopword).join("");
     }, rawCommand);
@@ -74,11 +78,14 @@ export class TestDepurator {
    *
    * Spawns a subprocess to run the test and registers the output
    */
-  public async reviewTest(): Promise<void> {
+  public async reviewTest(newTestCode?: string): Promise<TestReviewerResponse> {
     if (!this.chain) {
       throw new Error(
         "Please call Evaluator.init() before Evaluator.executeTest()"
       );
+    }
+    if (newTestCode) {
+      this.code = newTestCode;
     }
 
     // Write the test to the user's filesystem
@@ -95,12 +102,13 @@ export class TestDepurator {
      * than necessary
      */
     if (!this.runCommand) {
-      const task = `Tell me the appropiate command to run the test ${testPath} on my terminal`;
+      // const task = `Tell me the appropiate command to run the test ${testPath} on my terminal`;
+      const task = `I have a test located on ${testPath}. According to this projects configuration file, tell me the appropiate command to run this test only in my terminal.`
       const result = await this.chain.call({
         input: task,
       });
       const rawCommand = result.text;
-      const clearCommand = this.depurateCommand(rawCommand);
+      const clearCommand = this.depurateChainOutput(rawCommand);
 
       console.log("Command to run the test: ", clearCommand);
       this.runCommand = clearCommand;
@@ -108,31 +116,32 @@ export class TestDepurator {
 
     try {
       // Run the test
-      const { stdout, stderr } = await syncExec(
-        `${this.runCommand} ${testPath}`
+      const npx = 'npx'; // TODO: Improve the prompt to make it add this automatically
+      const args = this.runCommand.split(' ');
+      // Run command and capture the output
+      const commandResult = spawnSync(
+        npx, args, { stdio: 'pipe', cwd: this.directory }
       );
-      if (stderr) {
+      // Convert output buffer to string
+      const stderr = commandResult.output[2] ? commandResult.output[2].toString() : '';
+      // Check if the test failed
+      if (commandResult.status !== 0) {
         // There are errors on the generated test
-        console.log("Test failed");
-        console.log("stdout: ", stdout);
+        console.log(" -------- > Test failed < ---------"); // TODO: Remove this
         if (this.i < this.maxIterations) {
           console.log(`Trying to fix (iteration ${this.i})...`);
-          const task = `The test you generated failed with this error message: ${stderr}. Write a fixed version of the test`;
-          const result = await this.chain.call({
-            input: task,
-          });
-          const rawResponse = result.text;
-          const clearResponse = this.depurateCommand(rawResponse);
-          this.code = clearResponse;
-          await this.reviewTest();
+          this.i++;
+          return { success: false, output: stderr }
         } else {
           console.log(
             "Maxmimum number of iterations overpassed. Stopping the process..."
           );
+          return { success: false, output: 'maxIterationPassed' }
         }
       } else {
-        console.log("Test works!!!!");
-        console.log("stderr", stderr);
+        console.log(" --------> Test works!!!! <----------"); // TODO: Remove this
+        console.log("successful test result", stderr);
+        return { success: true, output: stderr }
       }
     } catch (e) {
       // invalid command
@@ -140,6 +149,7 @@ export class TestDepurator {
       // maybe in a small (controlled) loop until the command success?
       // THIS CAN BE DONE ON A 2ND ITERATION
       console.log(e);
+      return { success: false, output: 'unknown error' }
     }
   }
 }
