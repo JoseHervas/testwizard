@@ -124,6 +124,13 @@ export async function activate(context: vscode.ExtensionContext) {
                   await depurator.init();
                   let result = await depurator.reviewTest();
                   while (!result.success) {
+                    if (result.output === 'maxIterationPassed') {
+                      vscode.window.showInformationMessage(
+                        "🧙 TestWizard has tried 5 times, but couldn't solve the test. Your turn, human! Can you outsmart the AI?"
+                      );
+                      break;
+                    }
+                    // Generate a new test based on the previous one feeding the Generator with the error message
                     const newTest = await generator.generateTest(
                       selectedText,
                       fullText,
@@ -131,18 +138,15 @@ export async function activate(context: vscode.ExtensionContext) {
                       languageId,
                       result.output,
                     );
+                    // Review the new test
                     result = await depurator.reviewTest(newTest);
-                    if (result.output === 'maxIterationPassed') {
-                      vscode.window.showInformationMessage(
-                        "🧙 TestWizard could not solve the test in 5 iterations. Win the AI trying to solve it yourself human!"
-                      );
-                      resolve();
-                      break;
-                    }
                   }
-                  vscode.window.showInformationMessage(
-                    "Your new test is ready 🧙!"
-                  );
+                  if (result.success) {
+                    vscode.window.showInformationMessage(
+                      "Your new test is ready 🧙!"
+                    );
+                  }
+
                   resolve();
 
                 });
