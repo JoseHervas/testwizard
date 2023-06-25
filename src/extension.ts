@@ -122,11 +122,29 @@ export async function activate(context: vscode.ExtensionContext) {
                     generatedTest
                   );
                   await depurator.init();
-                  await depurator.reviewTest();
+                  let result = await depurator.reviewTest();
+                  while (!result.success) {
+                    const newTest = await generator.generateTest(
+                      selectedText,
+                      fullText,
+                      editor.document.fileName,
+                      languageId,
+                      result.output,
+                    );
+                    result = await depurator.reviewTest(newTest);
+                    if (result.output === 'maxIterationPassed') {
+                      vscode.window.showInformationMessage(
+                        "🧙 TestWizard could not solve the test in 5 iterations. Win the AI trying to solve it yourself human!"
+                      );
+                      resolve();
+                      break;
+                    }
+                  }
                   vscode.window.showInformationMessage(
                     "Your new test is ready 🧙!"
                   );
                   resolve();
+
                 });
               }
             );
