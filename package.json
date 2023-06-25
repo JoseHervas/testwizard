@@ -4,6 +4,7 @@
   "description": "Let the TestWizard 🧙 generate your unit tests!",
   "version": "0.1.0",
   "license": "MIT",
+  "icon": "logo.png",
   "engines": {
     "vscode": "^1.79.0"
   },

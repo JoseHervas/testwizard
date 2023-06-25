@@ -15,6 +15,12 @@ Generate unit tests for your code with ChatGPT!
 
 ## Examples
 
+<img src="./example2.png" />
+
+output:
+
+<img src="./example1.png" />
+
 There is a list of examples [on this repository](https://github.com/JoseHervas/testwizard-examples).
 
 ## 💎 TestWizard Plus
@@ -31,7 +37,7 @@ Soon we'll release a Plus version of this plugin which will feature:
 
 ## 👨‍💻 Technical docs
 
-[We have documented how TestWizard internally works here.](https://josehervas.github.io/testwizard/)
+[We have documented how TestWizard internally works here.](./docs/architecture.md)
 
 ## 🙌 Acknowledgements
 
